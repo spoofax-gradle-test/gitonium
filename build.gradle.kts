@@ -52,8 +52,8 @@ publishing {
       name = "Artifactory"
       url = uri("http://192.168.1.3:8091/artifactory/all/")
       credentials {
-        username = project.property("publish.repository.Artifactory.username")?.toString()
-        password = project.property("publish.repository.Artifactory.password")?.toString()
+        username = project.findProperty("publish.repository.Artifactory.username")?.toString()
+        password = project.findProperty("publish.repository.Artifactory.password")?.toString()
       }
     }
   }
