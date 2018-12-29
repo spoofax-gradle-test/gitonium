@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.metaborg"
-version = "master-SNAPSHOT"
+version = "develop-SNAPSHOT"
 
 repositories {
   mavenCentral()
