@@ -5,6 +5,7 @@ plugins {
   kotlin("jvm") version "1.3.10" apply true
   `kotlin-dsl`
   `java-gradle-plugin`
+  `maven-publish`
 }
 
 group = "org.metaborg"
@@ -42,5 +43,18 @@ tasks {
   }
   register("cleanAll") {
     dependsOn("clean")
+  }
+}
+
+publishing {
+  repositories {
+    maven {
+      name = "Artifactory"
+      url = uri("http://192.168.1.3:8091/artifactory/all/")
+      credentials {
+        username = project.property("publish.repository.Artifactory.username")?.toString()
+        password = project.property("publish.repository.Artifactory.password")?.toString()
+      }
+    }
   }
 }
