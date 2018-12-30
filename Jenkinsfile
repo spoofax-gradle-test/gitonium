@@ -1,10 +1,5 @@
 def publish
 def publishTaggedOnly
-script {
-  def props = readProperties defaults: ['publish': 'false', 'publish.tagged.only': 'false'], file: 'jenkins.properties'
-  publish = props['publish'] == 'true'
-  publishTaggedOnly = props['publish.tagged.only'] == 'true'
-}
 
 pipeline {
   agent any
@@ -14,6 +9,16 @@ pipeline {
   }
 
   stages {
+    stage('Prepare') {
+      steps {
+        script {
+          def props = readProperties defaults: ['publish': 'false', 'publish.tagged.only': 'false'], file: 'jenkins.properties'
+          publish = props['publish'] == 'true'
+          publishTaggedOnly = props['publish.tagged.only'] == 'true'
+        }
+      }
+    }
+
     stage('Build') {
      steps {
         sh 'gradle build'
