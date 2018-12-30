@@ -7,43 +7,26 @@ import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.kotlin.dsl.getByType
 import java.util.regex.Pattern
 
 @Suppress("unused")
-open class GitoniumExtension {
+open class GitoniumExtension(private val project: Project) {
   var mainBranch: String = "master"
-  var tagPattern: Pattern = Pattern.compile("release-(.+)")
-  var setSubprojectVersions: Boolean = true
-}
+  var tagPattern: Pattern = Pattern.compile(".*release-(.+)")
 
-@Suppress("unused")
-class GitoniumPlugin : Plugin<Project> {
-  override fun apply(project: Project) {
-    project.extensions.add("gitonium", GitoniumExtension())
-    project.afterEvaluate { configure(project) }
-  }
-
-  private fun configure(project: Project) {
-    val extension = project.extensions.getByType<GitoniumExtension>()
+  val version: String by lazy {
     val repo = FileRepositoryBuilder().readEnvironment().findGitDir(project.rootDir).setMustExist(true).build()
     val head = repo.resolve(Constants.HEAD) ?: throw RuntimeException("Repository has no HEAD")
-    val releaseVersion = releaseVersionFromTag(repo, head, extension.tagPattern)
+    val releaseVersion = releaseVersionFromTag(repo, head, tagPattern)
     val branch = repo.branch
-    val version = if(releaseVersion != null) {
-      if(branch == extension.mainBranch) {
+    if(releaseVersion != null) {
+      if(branch == mainBranch) {
         releaseVersion
       } else {
         "$releaseVersion-$branch"
       }
     } else {
       "$branch-SNAPSHOT"
-    }
-    project.version = version
-    if(extension.setSubprojectVersions) {
-      project.subprojects.forEach {
-        it.version = version
-      }
     }
   }
 
@@ -69,5 +52,12 @@ class GitoniumPlugin : Plugin<Project> {
       }
     }
     return null
+  }
+}
+
+@Suppress("unused")
+class GitoniumPlugin : Plugin<Project> {
+  override fun apply(project: Project) {
+    project.extensions.add("gitonium", GitoniumExtension(project))
   }
 }
