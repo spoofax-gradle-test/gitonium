@@ -12,7 +12,7 @@ import java.util.regex.Pattern
 @Suppress("unused")
 open class GitoniumExtension(private val project: Project) {
   var mainBranch: String = "master"
-  var tagPattern: Pattern = Pattern.compile("release-(.+)")
+  var tagPattern: Pattern = Pattern.compile(".*release-(.+)")
 
   val version: String by lazy {
     val repo = FileRepositoryBuilder().readEnvironment().findGitDir(project.rootDir).setMustExist(true).build()

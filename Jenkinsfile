@@ -30,7 +30,7 @@ pipeline {
         expression { return publish }
         anyOf {
           not { expression { return publishTaggedOnly } }
-          allOf { expression { return publishTaggedOnly }; tag "release-*" }
+          allOf { expression { return publishTaggedOnly }; tag "*release-*" }
         }
       }
       steps {
