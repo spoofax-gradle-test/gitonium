@@ -3,7 +3,9 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        sh 'gradle publish'
+        withCredentials([usernamePassword(credentialsId: 'artifactory', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+          sh 'gradle publish -Ppublish.repository.Artifactory.username=$USERNAME -Ppublish.repository.Artifactory.password=$PASSWORD'
+        }
       }
     }
   }
