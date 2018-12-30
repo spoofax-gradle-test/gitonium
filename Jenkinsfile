@@ -1,6 +1,6 @@
 def publish
 def publishTaggedOnly
-script {
+node {
   def props = readProperties defaults: ['publish': 'false', 'publish.tagged.only': 'false'], file: 'jenkins.properties'
   publish = props['publish'] == 'true'
   publishTaggedOnly = props['publish.tagged.only'] == 'true'
