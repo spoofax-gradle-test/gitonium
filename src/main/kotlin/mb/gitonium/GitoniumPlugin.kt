@@ -13,6 +13,8 @@ import java.util.regex.Pattern
 open class GitoniumExtension(private val project: Project) {
   var mainBranch: String = "master"
   var tagPattern: Pattern = Pattern.compile(".*release-(.+)")
+  var autoSetVersion: Boolean = true
+  var autoSetSubprojectVersions: Boolean = true
 
   val version: String by lazy {
     val repo = FileRepositoryBuilder().readEnvironment().findGitDir(project.rootDir).setMustExist(true).build()
@@ -55,9 +57,24 @@ open class GitoniumExtension(private val project: Project) {
   }
 }
 
+class LazyGitoniumVersion(private val project: Project, private val extension: GitoniumExtension, private val isSubProject: Boolean) {
+  override fun toString(): String {
+    return when {
+      extension.autoSetVersion && !isSubProject -> extension.version
+      extension.autoSetSubprojectVersions && isSubProject -> extension.version
+      else -> Project.DEFAULT_VERSION
+    }
+  }
+}
+
 @Suppress("unused")
 class GitoniumPlugin : Plugin<Project> {
   override fun apply(project: Project) {
-    project.extensions.add("gitonium", GitoniumExtension(project))
+    val extension = GitoniumExtension(project)
+    project.extensions.add("gitonium", extension)
+    project.version = LazyGitoniumVersion(project, extension, false)
+    project.subprojects.forEach {
+      it.version = LazyGitoniumVersion(project, extension, true)
+    }
   }
 }

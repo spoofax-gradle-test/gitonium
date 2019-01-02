@@ -1,3 +1,4 @@
+import mb.gitonium.GitoniumExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -6,14 +7,14 @@ plugins {
   `kotlin-dsl`
   `java-gradle-plugin`
   `maven-publish`
+  id("org.metaborg.gitonium") version "0.1.0"
 }
 
 group = "org.metaborg"
-version = "0.1.0"
+version = the<GitoniumExtension>().version
 
 repositories {
-  mavenCentral()
-  jcenter()
+  maven(url = "http://home.gohla.nl:8091/artifactory/all/")
 }
 
 dependencies {
