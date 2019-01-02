@@ -7,7 +7,7 @@ plugins {
   `kotlin-dsl`
   `java-gradle-plugin`
   `maven-publish`
-  id("org.metaborg.gitonium") version "0.1.0"
+  id("org.metaborg.gitonium") version "0.3.0"
 }
 
 group = "org.metaborg"
