@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "org.metaborg"
-version = the<GitoniumExtension>().version
+version = "0.2.0" //the<GitoniumExtension>().version
 
 repositories {
   maven(url = "http://home.gohla.nl:8091/artifactory/all/")
