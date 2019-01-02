@@ -1,34 +1,53 @@
 package mb.gitonium
 
+import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.AnyObjectId
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import java.io.IOException
 import java.util.regex.Pattern
 
 @Suppress("unused")
 open class GitoniumExtension(private val project: Project) {
-  var mainBranch: String = "master"
   var tagPattern: Pattern = Pattern.compile(".*release-(.+)")
   var autoSetVersion: Boolean = true
   var autoSetSubprojectVersions: Boolean = true
 
   val version: String by lazy {
-    val repo = FileRepositoryBuilder().readEnvironment().findGitDir(project.rootDir).setMustExist(true).build()
-    val head = repo.resolve(Constants.HEAD) ?: throw RuntimeException("Repository has no HEAD")
+    val repo = try {
+      FileRepositoryBuilder().readEnvironment().findGitDir(project.rootDir).setMustExist(true).build()
+    } catch(e: RepositoryNotFoundException) {
+      throw GradleException("Gitonium cannot set project version; no git repository found at ${project.rootDir}", e)
+    }
+
+    val head = try {
+      repo.resolve(Constants.HEAD)
+        ?: throw GradleException("Gitonium cannot set project version; repository has no HEAD")
+    } catch(e: IOException) {
+      throw GradleException("Gitonium cannot set project version; exception occurred when resolving repository HEAD", e)
+    }
+
     val releaseVersion = releaseVersionFromTag(repo, head, tagPattern)
-    val branch = repo.branch
-    if(releaseVersion != null) {
-      if(branch == mainBranch) {
-        releaseVersion
+
+    val branch = run {
+      val headRef = repo.exactRef(Constants.HEAD)
+        ?: throw GradleException("Gitonium cannot set project version; repository has no HEAD")
+      if(headRef.isSymbolic) {
+        Repository.shortenRefName(headRef.target.name)
       } else {
-        "$releaseVersion-$branch"
+        null
       }
-    } else {
-      "$branch-SNAPSHOT"
+    }
+
+    when {
+      releaseVersion != null -> releaseVersion
+      branch != null -> "$branch-SNAPSHOT"
+      else -> throw GradleException("Gitonium cannot set project version; repository HEAD is detached (and does not have a release tag)")
     }
   }
 
