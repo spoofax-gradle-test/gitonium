@@ -2,11 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   // Stick with version 1.3.10 because the kotlin-dsl plugin uses that.
-  kotlin("jvm") version "1.3.10" apply true
+  kotlin("jvm") version "1.3.10"
   `kotlin-dsl`
   `java-gradle-plugin`
   `maven-publish`
-  id("org.metaborg.gitonium") version "0.3.0"
+  id("org.metaborg.gitonium") version "0.3.0" // Bootstrap with previous version.
 }
 
 group = "org.metaborg"
