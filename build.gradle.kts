@@ -1,59 +1,31 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  // Stick with version 1.3.10 because the kotlin-dsl plugin uses that.
-  kotlin("jvm") version "1.3.10"
+  id("org.metaborg.gradle.config") version "0.4.1"
+  id("org.metaborg.gitonium") version "0.3.0" // Bootstrap with previous version.
+  kotlin("jvm") version "1.3.11" // Use version 1.3.11 for compatibility with Gradle 5.1.
   `kotlin-dsl`
   `java-gradle-plugin`
   `maven-publish`
-  id("org.metaborg.gitonium") version "0.3.0" // Bootstrap with previous version.
 }
 
-group = "org.metaborg"
-
-repositories {
-  maven(url = "http://home.gohla.nl:8091/artifactory/all/")
-}
+// TODO: configureKotlinGradlePlugin() causes compilation errors in plugin.
+//metaborgConfig {
+//  configureKotlinGradlePlugin()
+//}
 
 dependencies {
-  compile(kotlin("stdlib"))
   compile("org.eclipse.jgit:org.eclipse.jgit:5.2.0.201812061821-r")
 }
 
 kotlinDslPluginOptions {
   experimentalWarning.set(false)
 }
-tasks.withType<KotlinCompile>().all {
-  kotlinOptions.jvmTarget = "1.8"
-}
-
 gradlePlugin {
   plugins {
     create("gitonium") {
       id = "org.metaborg.gitonium"
       implementationClass = "mb.gitonium.GitoniumPlugin"
-    }
-  }
-}
-
-tasks {
-  register("buildAll") {
-    dependsOn("build")
-  }
-  register("cleanAll") {
-    dependsOn("clean")
-  }
-}
-
-publishing {
-  repositories {
-    maven {
-      name = "Artifactory"
-      url = uri("http://home.gohla.nl:8091/artifactory/all/")
-      credentials {
-        username = project.findProperty("publish.repository.Artifactory.username")?.toString()
-        password = project.findProperty("publish.repository.Artifactory.password")?.toString()
-      }
     }
   }
 }
