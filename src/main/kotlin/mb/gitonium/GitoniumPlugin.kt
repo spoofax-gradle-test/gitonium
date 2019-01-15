@@ -147,11 +147,11 @@ open class CheckSnapshotDependencies @Inject constructor(private val extension: 
     val snapshotDependencies = snapshotDependencyIds()
     if(snapshotDependencies.isEmpty()) return
     val sb = StringBuilder()
-    sb.append("Project ")
-    sb.append(project.toString())
-    sb.append(" has release version ")
+    sb.append("Project '")
+    sb.append(project.path)
+    sb.append("' will be published as a release under version '")
     sb.append(extension.version)
-    sb.append(", but has the following SNAPSHOT dependencies: ")
+    sb.append("', but has the following SNAPSHOT dependencies: ")
     snapshotDependencies.forEach {
       sb.append("\n- ")
       sb.append(it)
