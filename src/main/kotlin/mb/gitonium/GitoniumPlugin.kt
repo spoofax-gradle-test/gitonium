@@ -4,17 +4,19 @@ import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.*
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.gradle.api.*
-import org.gradle.api.artifacts.Dependency
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.register
 import java.io.IOException
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 @Suppress("unused")
 open class GitoniumExtension(private val project: Project) {
   var tagPattern: Pattern = Pattern.compile(""".*release-(.+)""")
   var autoSetVersion: Boolean = true
   var autoSetSubprojectVersions: Boolean = true
+  var checkSnapshotDependenciesInRelease: Boolean = true
 
 
   val version: String by lazy {
@@ -35,17 +37,6 @@ open class GitoniumExtension(private val project: Project) {
     }
   }
 
-
-  val releaseTagVersion: String? by lazy {
-    val head = try {
-      repo.resolve(Constants.HEAD)
-        ?: throw GradleException("Gitonium cannot set project version; repository has no HEAD")
-    } catch(e: IOException) {
-      throw GradleException("Gitonium cannot set project version; exception occurred when resolving repository HEAD", e)
-    }
-    releaseTagVersion(repo, head, tagPattern)
-  }
-
   val isRelease: Boolean get() = releaseTagVersion != null
 
 
@@ -55,6 +46,16 @@ open class GitoniumExtension(private val project: Project) {
     } catch(e: RepositoryNotFoundException) {
       throw GradleException("Gitonium cannot set project version; no git repository found at ${project.rootDir}", e)
     }
+  }
+
+  private val releaseTagVersion: String? by lazy {
+    val head = try {
+      repo.resolve(Constants.HEAD)
+        ?: throw GradleException("Gitonium cannot set project version; repository has no HEAD")
+    } catch(e: IOException) {
+      throw GradleException("Gitonium cannot set project version; exception occurred when resolving repository HEAD", e)
+    }
+    releaseTagVersion(repo, head, tagPattern)
   }
 
   private fun releaseTagVersion(repo: Repository, head: ObjectId, tagPattern: Pattern): String? {
@@ -98,46 +99,63 @@ class GitoniumPlugin : Plugin<Project> {
     // Create and add extension.
     val extension = GitoniumExtension(project)
     project.extensions.add("gitonium", extension)
-
-    // Set project and sub-project versions
+    // Set project and sub-project versions.
     project.version = LazyGitoniumVersion(extension, false)
     project.subprojects.forEach {
       it.version = LazyGitoniumVersion(extension, true)
     }
-
     // Register "check for snapshot dependencies" task when publishing for project and sub-projects.
     project.afterEvaluate {
-      registerCheckForSnapshotDependenciesTasks(this, extension)
+      registerCheckSnapshotDependenciesTask(this, extension)
       subprojects.forEach {
-        registerCheckForSnapshotDependenciesTasks(it, extension)
+        registerCheckSnapshotDependenciesTask(it, extension)
       }
     }
   }
 
-  private fun registerCheckForSnapshotDependenciesTasks(project: Project, extension: GitoniumExtension) {
-    val publishTask = project.tasks.findByName("publish")
-    if(publishTask != null) {
-      val checkTask = project.tasks.register<CheckForSnapshotDependencies>("checkReleaseDependenciesSnapshotVersions", extension)
-      publishTask.dependsOn(checkTask)
-    }
+  private fun registerCheckSnapshotDependenciesTask(project: Project, extension: GitoniumExtension) {
+    if(!extension.checkSnapshotDependenciesInRelease) return
+    val publishTask = project.tasks.findByName("publish") ?: return
+    val checkTask = project.tasks.register<CheckSnapshotDependencies>("checkSnapshotDependencies", extension)
+    publishTask.dependsOn(checkTask)
   }
 }
 
-open class CheckForSnapshotDependencies(private val extension: GitoniumExtension) : DefaultTask() {
-  @TaskAction
-  fun check() {
-    // TODO: what are the inputs and outputs of this task, for incrementality?
-    if(extension.isRelease) {
-      val dependencies = mutableSetOf<Dependency>()
-      project.configurations.flatMapTo(dependencies) {
-        it.allDependencies
-      }
-      dependencies.forEach {
-        val version = it.version // Assign to local val to enable smart cast.
+open class CheckSnapshotDependencies @Inject constructor(private val extension: GitoniumExtension) : DefaultTask() {
+  @Input
+  fun isRelease(): Boolean {
+    return extension.isRelease
+  }
+
+  @Input
+  fun snapshotDependencyIds(): List<String> {
+    return project.configurations.flatMap { configuration ->
+      configuration.allDependencies.mapNotNull { dependency ->
+        val version = dependency.version // Assign to local val to enable smart cast.
         if(version != null && version.endsWith("-SNAPSHOT")) {
-          throw GradleException("")
+          "${dependency.group}:${dependency.name}:${dependency.version}"
+        } else {
+          null
         }
       }
+    }.distinct()
+  }
+
+  @TaskAction
+  fun check() {
+    if(!isRelease()) return
+    val snapshotDependencies = snapshotDependencyIds()
+    if(snapshotDependencies.isEmpty()) return
+    val sb = StringBuilder()
+    sb.append("Project ")
+    sb.append(project.toString())
+    sb.append(" has release version ")
+    sb.append(extension.version)
+    sb.append(", but has the following SNAPSHOT dependencies: ")
+    snapshotDependencies.forEach {
+      sb.append("\n- ")
+      sb.append(it)
     }
+    throw GradleException(sb.toString())
   }
 }
