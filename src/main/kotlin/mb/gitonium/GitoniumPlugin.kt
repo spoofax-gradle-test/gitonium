@@ -40,7 +40,7 @@ open class GitoniumExtension(private val project: Project) {
   val isRelease: Boolean get() = releaseTagVersion != null
 
 
-  private val repo: Repository by lazy {
+  internal val repo: Repository by lazy {
     try {
       FileRepositoryBuilder().readEnvironment().findGitDir(project.rootDir).setMustExist(true).build()
     } catch(e: RepositoryNotFoundException) {
@@ -110,6 +110,10 @@ class GitoniumPlugin : Plugin<Project> {
       subprojects.forEach {
         registerCheckSnapshotDependenciesTask(it, extension)
       }
+    }
+    // Close repository after build is finished to free resources.
+    project.gradle.buildFinished {
+      extension.repo.close()
     }
   }
 
